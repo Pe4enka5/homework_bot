@@ -125,12 +125,17 @@ def main():
             if message != old_messages:
                 send_message(bot, message)
                 old_messages = message
+            else:
+                logging.debug('Данное сообщение уже было отправлено')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logging.exception(message)
             if message != old_messages:
                 send_message(bot, message)
                 old_messages = message
+            else:
+                logging.debug(f'Данное сообщение о {error}'
+                              ' уже было отправлено')
         time.sleep(RETRY_PERIOD)
 
 
