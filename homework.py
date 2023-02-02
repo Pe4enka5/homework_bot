@@ -8,7 +8,7 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exceptions import ApiAnswerError
+from exceptions import ApiAnswerError, RequestApiError
 
 load_dotenv()
 PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
@@ -54,10 +54,10 @@ def get_api_answer(timestamp):
                                 headers=HEADERS,
                                 params=params)
     except requests.RequestException as error:
-        raise (f'Ошибка при запросе к API-сервису, {error}'
-               ' при следующих параметрах запроса'
-               f' url = {ENDPOINT}, headers = {HEADERS}'
-               f' params = {params}')
+        raise RequestApiError(f'Ошибка при запросе к API-сервису, {error}'
+                              ' при следующих параметрах запроса'
+                              f' url = {ENDPOINT}, headers = {HEADERS}'
+                              f' params = {params}')
     if response.status_code != HTTPStatus.OK:
         raise ApiAnswerError(f'Ошибка доступа к API.'
                              f'request params = {params};'
@@ -78,8 +78,8 @@ def check_response(response):
         raise TypeError('Запрос пришел не в виде списка')
     if 'current_date' not in response:
         raise KeyError('Отсутствует ключ current_date')
-    homework = response.get('homeworks')
-    return homework
+    homeworks = response.get('homeworks')
+    return homeworks
 
 
 def parse_status(homework):
@@ -113,10 +113,10 @@ def main():
         try:
             response = get_api_answer(timestamp)
             timestamp = response.get('current_date', timestamp)
-            homework = check_response(response)
-            if homework:
-                homework = homework[0]
-                message = parse_status(homework)
+            homeworks = check_response(response)
+            if homeworks:
+                homeworks = homeworks[0]
+                message = parse_status(homeworks)
                 logging.debug('Новый статус')
             else:
                 message = (f'За период от {timestamp} до настоящего'
