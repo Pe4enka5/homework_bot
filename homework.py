@@ -15,7 +15,6 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM_TOKEN')
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
-START_OF_TRAINING = 1666094400
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
@@ -35,10 +34,9 @@ def check_tokens():
 
 def send_message(bot, message):
     """Отправка сообщений в чат."""
-    logging.debug('Отправка сообщения в Telegram')
+    logging.debug(f'Отправляется следующие сообщение: {message}')
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logging.debug(f'Отправляется следующие сообщение: {message}')
     except telegram.TelegramError as error:
         logging.error(f'Сбой при отправке сообщения в Telegram. {error}',
                       exc_info=True)
@@ -48,18 +46,18 @@ def send_message(bot, message):
 def get_api_answer(timestamp):
     """Запрос к единственному эндпоинту API-сервиса."""
     logging.debug('Начало запроса к API')
-    timestamp = START_OF_TRAINING or int(time.time())
+    timestamp = int(time.time())
     params = {'from_date': timestamp}
     logging.debug(f'Начался запрос к {ENDPOINT}')
     try:
         response = requests.get(ENDPOINT,
                                 headers=HEADERS,
                                 params=params)
-    except Exception as error:
-        raise Exception(f'Ошибка при запросе к API-сервису, {error}'
-                        'при следующих параметрах запроса'
-                        f'url = {ENDPOINT}, headers = {HEADERS}'
-                        f'params = {params}')
+    except requests.RequestException as error:
+        raise (f'Ошибка при запросе к API-сервису, {error}'
+               ' при следующих параметрах запроса'
+               f' url = {ENDPOINT}, headers = {HEADERS}'
+               f' params = {params}')
     if response.status_code != HTTPStatus.OK:
         raise ApiAnswerError(f'Ошибка доступа к API.'
                              f'request params = {params};'
@@ -80,7 +78,7 @@ def check_response(response):
         raise TypeError('Запрос пришел не в виде списка')
     if 'current_date' not in response:
         raise KeyError('Отсутствует ключ current_date')
-    homework = response.get('homeworks')[0]
+    homework = response.get('homeworks')
     return homework
 
 
@@ -114,14 +112,16 @@ def main():
     while True:
         try:
             response = get_api_answer(timestamp)
-            timestamp = response.get('current_date')
+            timestamp = response.get('current_date', timestamp)
             homework = check_response(response)
-            if homework == []:
-                message = (f'За период от {timestamp} до настоящего'
-                           'момента домашних работ нет.')
-                logging.debug('Новых статусов нет')
-            else:
+            if homework:
+                homework = homework[0]
                 message = parse_status(homework)
+                logging.debug('Новый статус')
+            else:
+                message = (f'За период от {timestamp} до настоящего'
+                           ' момента изменения статуса домашней работы нет.')
+                logging.debug('Новых статусов нет')
             if message != old_messages:
                 send_message(bot, message)
                 old_messages = message
