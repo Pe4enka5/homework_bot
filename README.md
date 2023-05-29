@@ -33,5 +33,5 @@ python homework_bot.py
 
 
 ### Автор: 
-Андрей Pe4enka5 Печерица
+[Андрей Pe4enka5 Печерица](https://github.com/Pe4enka5)
 Всем добра и печенек!
